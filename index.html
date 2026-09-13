@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Kebiasaan — Habit Tracker</title>
+<meta name="theme-color" content="#1F2A44">
+<meta name="description" content="Lacak kebiasaan harianmu, sederhana dan elegan.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --navy:#1F2A44;
+    --navy-light:#334467;
+    --gold:#C9A24B;
+    --gold-light:#F4EBD6;
+    --cream:#FAF8F3;
+    --white:#FFFFFF;
+    --ink:#2B2E36;
+    --grey:#8A8F9C;
+    --grey-line:#E7E4DC;
+    --green:#3C8C5F;
+    --green-fill:#E4F2E9;
+    --red:#B94A48;
+    --radius:14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    overscroll-behavior-y:none;
+  }
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--cream);
+  }
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    padding: calc(18px + var(--safe-top)) 20px 16px;
+    background:var(--navy);
+    color:var(--white);
+    border-radius:0 0 22px 22px;
+  }
+  header.topbar .eyebrow{
+    font-size:13px; color:var(--gold); font-weight:600; margin:0 0 2px;
+  }
+  header.topbar h1{
+    margin:0; font-size:24px; font-weight:700; letter-spacing:-0.01em;
+  }
+  header.topbar .sub{
+    margin-top:4px; font-size:13.5px; color:#B9C0D4;
+  }
+  .hero-stat{
+    margin-top:18px;
+    display:flex; align-items:flex-end; gap:10px;
+  }
+  .hero-stat .num{
+    font-size:44px; font-weight:800; line-height:1; color:var(--gold);
+  }
+  .hero-stat .label{
+    font-size:13px; color:#B9C0D4; padding-bottom:6px;
+  }
+
+  /* ---------- Main views ---------- */
+  main{ flex:1; padding: 16px 16px calc(90px + var(--safe-bottom)); }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .section-title{
+    font-size:14px; font-weight:700; color:var(--navy);
+    margin: 18px 4px 10px;
+  }
+  .section-title:first-child{ margin-top:4px; }
+
+  /* ---------- Habit row (Today view) ---------- */
+  .habit-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--white);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    margin-bottom:10px;
+    border-left:5px solid var(--habit-color, var(--gold));
+    box-shadow:0 1px 2px rgba(31,42,68,0.06);
+  }
+  .habit-row .info{ flex:1; min-width:0; }
+  .habit-row .name{ font-size:15.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .habit-row .meta{ font-size:12px; color:var(--grey); margin-top:2px; }
+  .habit-row .meta .flame{ color:#D98A3D; }
+
+  .check-btn{
+    width:40px; height:40px; border-radius:50%;
+    border:2px solid var(--grey-line);
+    background:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:transparent;
+    flex-shrink:0;
+    transition:transform .12s ease, background .15s ease, border-color .15s ease;
+  }
+  .check-btn.done{
+    background:var(--green); border-color:var(--green); color:var(--white);
+  }
+  .check-btn.skip{
+    background:var(--grey-line); border-color:var(--grey-line); color:var(--grey);
+  }
+  .check-btn:active{ transform:scale(0.88); }
+
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--grey);
+  }
+  .empty-state .big{ font-size:38px; margin-bottom:10px; }
+  .empty-state p{ font-size:14px; line-height:1.5; margin:4px 0; }
+  .empty-state button{ margin-top:14px; }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    border:none; border-radius:12px; padding:12px 18px;
+    font-size:14.5px; font-weight:600; font-family:inherit;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--navy); color:var(--white); }
+  .btn-gold{ background:var(--gold); color:var(--navy); }
+  .btn-ghost{ background:var(--white); color:var(--navy); border:1px solid var(--grey-line); }
+  .btn-danger{ background:var(--red); color:var(--white); }
+  .btn-block{ width:100%; }
+  .btn:active{ opacity:0.85; }
+
+  .fab{
+    position:fixed;
+    right:calc(50% - 260px + 20px);
+    bottom:calc(96px + var(--safe-bottom));
+    width:56px; height:56px; border-radius:50%;
+    background:var(--gold); color:var(--navy);
+    font-size:26px; font-weight:700; border:none;
+    box-shadow:0 6px 16px rgba(201,162,75,0.45);
+    display:flex; align-items:center; justify-content:center;
+    z-index:20;
+  }
+  @media (max-width:559px){
+    .fab{ right:20px; }
+  }
+
+  /* ---------- Bottom nav ---------- */
+  nav.bottomnav{
+    position:fixed; left:0; right:0; bottom:0;
+    max-width:520px; margin:0 auto;
+    background:var(--white);
+    border-top:1px solid var(--grey-line);
+    display:flex;
+    padding-bottom: var(--safe-bottom);
+    z-index:10;
+  }
+  nav.bottomnav button{
+    flex:1; background:none; border:none; padding:10px 4px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--grey); font-family:inherit;
+  }
+  nav.bottomnav button .ic{ font-size:20px; }
+  nav.bottomnav button .lb{ font-size:10.5px; font-weight:600; }
+  nav.bottomnav button.active{ color:var(--navy); }
+  nav.bottomnav button.active .ic{ transform:translateY(-1px); }
+
+  /* ---------- Calendar view ---------- */
+  .cal-habit-select{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--grey-line);
+    background:var(--white); font-family:inherit; font-size:14.5px; color:var(--ink);
+    margin-bottom:14px; appearance:none;
+  }
+  .cal-nav{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .cal-nav .month-label{ font-size:16px; font-weight:700; color:var(--navy); }
+  .cal-nav button{
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--grey-line);
+    background:var(--white); font-size:15px; color:var(--navy);
+  }
+  .cal-grid{
+    display:flex; flex-wrap:wrap;
+    background:var(--white); border-radius:var(--radius); padding:12px;
+  }
+  .cal-grid .wd{ width:14.28%; text-align:center; font-size:11px; color:var(--grey); font-weight:700; padding-bottom:4px; box-sizing:border-box; }
+  .cal-day{
+    width:14.28%; box-sizing:border-box;
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    border-radius:10px; font-size:13px; color:var(--ink); background:var(--cream);
+    position:relative;
+  }
+  @supports (display:grid){
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+    .cal-grid .wd, .cal-day{ width:auto; }
+  }
+  .cal-day.empty{ background:transparent; }
+  .cal-day.today{ box-shadow:inset 0 0 0 2px var(--gold); font-weight:700; }
+  .cal-day.done{ background:var(--green); color:var(--white); font-weight:700; }
+  .cal-day.skip{ background:var(--grey-line); color:var(--grey); }
+
+  /* ---------- Stats view ---------- */
+  .stat-card{
+    background:var(--white); border-radius:var(--radius); padding:16px;
+    margin-bottom:12px; box-shadow:0 1px 2px rgba(31,42,68,0.06);
+  }
+  .stat-card .top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .stat-card .name{ font-size:14.5px; font-weight:600; color:var(--ink); }
+  .stat-card .pct{ font-size:14.5px; font-weight:700; color:var(--gold); }
+  .bar-track{ height:8px; border-radius:6px; background:var(--grey-line); overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--gold); border-radius:6px; }
+  .stat-card .sub{ font-size:11.5px; color:var(--grey); margin-top:6px; }
+
+  .kpi-row{ display:flex; gap:10px; margin-bottom:16px; }
+  .kpi{
+    flex:1; background:var(--white); border-radius:var(--radius); padding:14px 10px;
+    text-align:center; box-shadow:0 1px 2px rgba(31,42,68,0.06);
+  }
+  .kpi .n{ font-size:22px; font-weight:800; color:var(--navy); }
+  .kpi .l{ font-size:10.5px; color:var(--grey); margin-top:2px; }
+
+  /* ---------- Settings view ---------- */
+  .settings-list{ background:var(--white); border-radius:var(--radius); overflow:hidden; }
+  .settings-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid var(--grey-line);
+  }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row .t{ font-size:14.5px; color:var(--ink); }
+  .settings-row .t small{ display:block; color:var(--grey); font-size:11.5px; margin-top:2px; }
+  .settings-row button{ background:none; border:none; color:var(--navy); font-weight:600; font-size:13.5px; font-family:inherit; }
+  .settings-row button.danger{ color:var(--red); }
+  .habit-edit-row{
+    display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--grey-line);
+  }
+  .habit-edit-row .dot{ width:12px; height:12px; border-radius:50%; background:var(--c); flex-shrink:0; }
+  .habit-edit-row .nm{ flex:1; font-size:14px; }
+  .habit-edit-row button{ background:none; border:none; font-size:16px; color:var(--grey); padding:4px 6px; }
+
+  footer.credit{ text-align:center; font-size:11px; color:var(--grey); padding:18px 0 6px; }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(31,42,68,0.45);
+    display:flex; align-items:flex-end; z-index:30;
+  }
+  .modal-backdrop.hidden{ display:none; }
+  .modal-sheet{
+    background:var(--white); width:100%; max-width:520px; margin:0 auto;
+    border-radius:20px 20px 0 0; padding:20px 20px calc(24px + var(--safe-bottom));
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal-sheet h2{ margin:0 0 16px; font-size:18px; color:var(--navy); }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--navy); margin-bottom:6px; }
+  .field input[type=text]{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--grey-line);
+    font-family:inherit; font-size:15px; background:var(--cream);
+  }
+  .target-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .target-pills button{
+    padding:8px 12px; border-radius:20px; border:1px solid var(--grey-line);
+    background:var(--cream); font-family:inherit; font-size:13px; color:var(--ink);
+  }
+  .target-pills button.sel{ background:var(--navy); border-color:var(--navy); color:var(--white); }
+  .color-pills{ display:flex; gap:8px; flex-wrap:wrap; }
+  .color-pills button{
+    width:30px; height:30px; border-radius:50%; border:2px solid transparent; padding:0;
+  }
+  .color-pills button.sel{ border-color:var(--navy); }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .modal-actions .btn{ flex:1; }
+
+  .toast{
+    position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    background:var(--navy); color:var(--white); padding:10px 18px; border-radius:20px;
+    font-size:13px; z-index:40; opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <p class="eyebrow">KEBIASAAN TRACKER</p>
+    <h1 id="greeting">Halo 👋</h1>
+    <p class="sub" id="today-date">—</p>
+    <div class="hero-stat">
+      <div class="num" id="hero-streak">0</div>
+      <div class="label">hari beruntun<br>semua kebiasaan tuntas</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- TODAY -->
+    <section class="view active" id="view-today">
+      <p class="section-title">Hari ini</p>
+      <div id="today-list"></div>
+      <div id="today-empty" class="empty-state" hidden>
+        <div class="big">🌱</div>
+        <p><strong>Belum ada kebiasaan.</strong></p>
+        <p>Mulai dengan menambahkan satu kebiasaan yang ingin kamu bangun — misalnya olahraga, membaca, atau tidur lebih awal.</p>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="view" id="view-calendar">
+      <p class="section-title">Kalender</p>
+      <select class="cal-habit-select" id="cal-habit-select"></select>
+      <div class="cal-nav">
+        <button id="cal-prev">‹</button>
+        <span class="month-label" id="cal-month-label">—</span>
+        <button id="cal-next">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="cal-empty" class="empty-state" hidden>
+        <div class="big">🗓️</div>
+        <p>Tambahkan kebiasaan dulu untuk melihat kalendernya.</p>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="view" id="view-stats">
+      <p class="section-title">Statistik Bulan Ini</p>
+      <div class="kpi-row">
+        <div class="kpi"><div class="n" id="kpi-total">0</div><div class="l">Kebiasaan</div></div>
+        <div class="kpi"><div class="n" id="kpi-avg">0%</div><div class="l">Rata-rata</div></div>
+        <div class="kpi"><div class="n" id="kpi-best">-</div><div class="l">Terbaik</div></div>
+      </div>
+      <div id="stats-list"></div>
+      <div id="stats-empty" class="empty-state" hidden>
+        <div class="big">📊</div>
+        <p>Statistik akan muncul setelah kamu punya kebiasaan yang dilacak.</p>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <p class="section-title">Kelola Kebiasaan</p>
+      <div class="settings-list" id="habit-manage-list"></div>
+
+      <p class="section-title">Data</p>
+      <div class="settings-list">
+        <div class="settings-row">
+          <div class="t">Ekspor data<small>Simpan cadangan sebagai file .json</small></div>
+          <button id="btn-export">Ekspor</button>
+        </div>
+        <div class="settings-row">
+          <div class="t">Impor data<small>Muat data dari file cadangan</small></div>
+          <button id="btn-import">Impor</button>
+        </div>
+        <div class="settings-row">
+          <div class="t">Hapus semua data<small>Tidak bisa dibatalkan</small></div>
+          <button class="danger" id="btn-reset">Hapus</button>
+        </div>
+      </div>
+      <input type="file" id="file-import" accept="application/json" hidden>
+      <footer class="credit">Kebiasaan Tracker · data tersimpan di perangkat ini</footer>
+    </section>
+  </main>
+
+  <button class="fab" id="fab-add">+</button>
+
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-view="today"><span class="ic">✅</span><span class="lb">Hari Ini</span></button>
+    <button class="nav-btn" data-view="calendar"><span class="ic">🗓️</span><span class="lb">Kalender</span></button>
+    <button class="nav-btn" data-view="stats"><span class="ic">📊</span><span class="lb">Statistik</span></button>
+    <button class="nav-btn" data-view="settings"><span class="ic">⚙️</span><span class="lb">Atur</span></button>
+  </nav>
+</div>
+
+<!-- Add/Edit habit modal -->
+<div class="modal-backdrop hidden" id="modal">
+  <div class="modal-sheet">
+    <h2 id="modal-title">Kebiasaan Baru</h2>
+    <div class="field">
+      <label>Nama kebiasaan</label>
+      <input type="text" id="input-name" placeholder="misal: Olahraga 20 menit" maxlength="40">
+    </div>
+    <div class="field">
+      <label>Target per minggu</label>
+      <div class="target-pills" id="target-pills"></div>
+    </div>
+    <div class="field">
+      <label>Warna label</label>
+      <div class="color-pills" id="color-pills"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btn-cancel">Batal</button>
+      <button class="btn btn-primary" id="btn-save">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- lightweight polyfills for older WebViews ----
+  if(!String.prototype.padStart){
+    String.prototype.padStart = function(len, pad){
+      var s = String(this);
+      while(s.length < len) s = pad + s;
+      return s;
+    };
+  }
+  if(!Array.prototype.find){
+    Array.prototype.find = function(fn){
+      for(var i=0;i<this.length;i++){ if(fn(this[i],i)) return this[i]; }
+      return undefined;
+    };
+  }
+  if(typeof NodeList !== "undefined" && !NodeList.prototype.forEach){
+    NodeList.prototype.forEach = function(fn, ctx){
+      for(var i=0;i<this.length;i++){ fn.call(ctx, this[i], i, this); }
+    };
+  }
+
+  var STORAGE_KEY = "habit_tracker_data_v1";
+  var COLORS = ["#C9A24B","#3C8C5F","#2E5C8A","#B94A48","#8A5AC9","#D98A3D"];
+  var DAY_MS = 86400000;
+  var DAY_NAMES = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  var MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+  // ---------- state ----------
+  var state = load();
+  var editingId = null;
+  var calHabitId = null;
+  var calMonthDate = startOfMonth(new Date());
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return { habits: [] };
+  }
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayKey(){ return fmtKey(new Date()); }
+  function fmtKey(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function daysInMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  // ---------- streak / consistency helpers ----------
+  function habitStreak(h){
+    var streak = 0;
+    var d = new Date();
+    // if today not yet marked, start counting from yesterday so an unmarked "today" doesn't zero the streak
+    if(!(h.logs[fmtKey(d)] === "done")) d = new Date(d.getTime() - DAY_MS);
+    while(true){
+      var k = fmtKey(d);
+      var v = h.logs[k];
+      if(v === "done"){ streak++; d = new Date(d.getTime() - DAY_MS); }
+      else if(v === "skip"){ d = new Date(d.getTime() - DAY_MS); } // skip days don't break streak
+      else break;
+    }
+    return streak;
+  }
+  function monthConsistency(h, refDate){
+    refDate = refDate || new Date();
+    var y = refDate.getFullYear(), m = refDate.getMonth();
+    var totalDays = new Date(y, m+1, 0).getDate();
+    var isCurrentMonth = (y===new Date().getFullYear() && m===new Date().getMonth());
+    var elapsed = isCurrentMonth ? new Date().getDate() : totalDays;
+    var done=0, skip=0;
+    for(var day=1; day<=elapsed; day++){
+      var k = y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+      if(h.logs[k]==="done") done++;
+      else if(h.logs[k]==="skip") skip++;
+    }
+    var denom = Math.max(elapsed - skip, 1);
+    return Math.round((done/denom)*100);
+  }
+  function allDoneToday(){
+    if(state.habits.length===0) return false;
+    var k = todayKey();
+    return state.habits.every(function(h){ return h.logs[k]==="done" || h.logs[k]==="skip"; });
+  }
+  function overallStreak(){
+    var streak = 0;
+    var d = new Date();
+    if(!allDoneTodayCheck(d)) d = new Date(d.getTime()-DAY_MS);
+    while(true){
+      if(allDoneTodayCheck(d)){ streak++; d = new Date(d.getTime()-DAY_MS); }
+      else break;
+      if(streak > 3650) break;
+    }
+    return streak;
+  }
+  function allDoneTodayCheck(d){
+    if(state.habits.length===0) return false;
+    var k = fmtKey(d);
+    return state.habits.every(function(h){ return h.logs[k]==="done" || h.logs[k]==="skip"; });
+  }
+
+  // ---------- rendering: header ----------
+  function renderHeader(){
+    var hour = new Date().getHours();
+    var greet = hour<11 ? "Selamat pagi 👋" : hour<15 ? "Selamat siang 👋" : hour<18 ? "Selamat sore 👋" : "Selamat malam 👋";
+    document.getElementById("greeting").textContent = greet;
+    var now = new Date();
+    document.getElementById("today-date").textContent = DAY_NAMES[now.getDay()] + ", " + now.getDate() + " " + MONTH_NAMES[now.getMonth()];
+    document.getElementById("hero-streak").textContent = overallStreak();
+  }
+
+  // ---------- rendering: today ----------
+  function renderToday(){
+    var list = document.getElementById("today-list");
+    var empty = document.getElementById("today-empty");
+    list.innerHTML = "";
+    if(state.habits.length===0){ empty.hidden=false; return; }
+    empty.hidden = true;
+    var k = todayKey();
+    state.habits.forEach(function(h){
+      var row = document.createElement("div");
+      row.className = "habit-row";
+      row.style.setProperty("--habit-color", h.color);
+      var st = habitStreak(h);
+      row.innerHTML =
+        '<div class="info">'+
+          '<div class="name"></div>'+
+          '<div class="meta">Target '+h.target+'x/minggu'+(st>0 ? ' &middot; <span class="flame">🔥 '+st+' hari</span>' : '')+'</div>'+
+        '</div>'+
+        '<button class="check-btn" data-id="'+h.id+'">✓</button>';
+      row.querySelector(".name").textContent = h.name;
+      var btn = row.querySelector(".check-btn");
+      var v = h.logs[k];
+      if(v==="done") btn.classList.add("done");
+      if(v==="skip") btn.classList.add("skip");
+      btn.addEventListener("click", function(){ cycleToday(h.id); });
+      row.addEventListener("dblclick", function(){ openEdit(h.id); });
+      list.appendChild(row);
+    });
+  }
+  function cycleToday(id){
+    var h = state.habits.find(function(x){ return x.id===id; });
+    if(!h) return;
+    var k = todayKey();
+    var cur = h.logs[k];
+    if(!cur) h.logs[k] = "done";
+    else if(cur==="done") h.logs[k] = "skip";
+    else delete h.logs[k];
+    save();
+    renderAll();
+  }
+
+  // ---------- rendering: calendar ----------
+  function renderCalendarSelect(){
+    var sel = document.getElementById("cal-habit-select");
+    sel.innerHTML = "";
+    state.habits.forEach(function(h){
+      var o = document.createElement("option");
+      o.value = h.id; o.textContent = h.name;
+      sel.appendChild(o);
+    });
+    if(!calHabitId || !state.habits.find(function(h){return h.id===calHabitId;})){
+      calHabitId = state.habits.length ? state.habits[0].id : null;
+    }
+    sel.value = calHabitId || "";
+  }
+  function renderCalendarGrid(){
+    var grid = document.getElementById("cal-grid");
+    var emptyState = document.getElementById("cal-empty");
+    document.getElementById("cal-habit-select").style.display = state.habits.length ? "" : "none";
+    document.querySelector(".cal-nav").style.display = state.habits.length ? "" : "none";
+    if(!state.habits.length){ grid.innerHTML=""; emptyState.hidden=false; return; }
+    emptyState.hidden = true;
+    var h = state.habits.find(function(x){ return x.id===calHabitId; });
+    if(!h) return;
+    document.getElementById("cal-month-label").textContent = MONTH_NAMES[calMonthDate.getMonth()] + " " + calMonthDate.getFullYear();
+    grid.innerHTML = "";
+    ["Sen","Sel","Rab","Kam","Jum","Sab","Min"].forEach(function(wd){
+      var el = document.createElement("div"); el.className="wd"; el.textContent = wd; grid.appendChild(el);
+    });
+    var first = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth(), 1);
+    var startOffset = (first.getDay()+6)%7; // Monday=0
+    for(var i=0;i<startOffset;i++){
+      var e = document.createElement("div"); e.className="cal-day empty"; grid.appendChild(e);
+    }
+    var total = daysInMonth(calMonthDate);
+    var todayK = todayKey();
+    for(var day=1; day<=total; day++){
+      var d = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth(), day);
+      var k = fmtKey(d);
+      var cell = document.createElement("div");
+      cell.className = "cal-day";
+      if(k===todayK) cell.classList.add("today");
+      var v = h.logs[k];
+      if(v==="done") cell.classList.add("done");
+      if(v==="skip") cell.classList.add("skip");
+      cell.textContent = day;
+      cell.addEventListener("click", function(dateKey){
+        return function(){
+          var cur = h.logs[dateKey];
+          if(!cur) h.logs[dateKey]="done";
+          else if(cur==="done") h.logs[dateKey]="skip";
+          else delete h.logs[dateKey];
+          save(); renderAll();
+        };
+      }(k));
+      grid.appendChild(cell);
+    }
+  }
+
+  // ---------- rendering: stats ----------
+  function renderStats(){
+    var list = document.getElementById("stats-list");
+    var empty = document.getElementById("stats-empty");
+    list.innerHTML = "";
+    document.querySelector("#view-stats .kpi-row").style.display = state.habits.length ? "" : "none";
+    if(!state.habits.length){ empty.hidden=false; return; }
+    empty.hidden = true;
+    var pct = state.habits.map(function(h){ return {h:h, p: monthConsistency(h)}; });
+    document.getElementById("kpi-total").textContent = state.habits.length;
+    var avg = Math.round(pct.reduce(function(s,x){return s+x.p;},0)/pct.length);
+    document.getElementById("kpi-avg").textContent = avg + "%";
+    var best = pct.slice().sort(function(a,b){return b.p-a.p;})[0];
+    document.getElementById("kpi-best").textContent = best ? best.h.name : "-";
+
+    pct.forEach(function(x){
+      var card = document.createElement("div");
+      card.className = "stat-card";
+      card.innerHTML =
+        '<div class="top"><span class="name"></span><span class="pct">'+x.p+'%</span></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+x.p+'%; background:'+x.h.color+'"></div></div>'+
+        '<div class="sub">🔥 '+habitStreak(x.h)+' hari beruntun &middot; target '+x.h.target+'x/minggu</div>';
+      card.querySelector(".name").textContent = x.h.name;
+      list.appendChild(card);
+    });
+  }
+
+  // ---------- rendering: settings ----------
+  function renderSettings(){
+    var list = document.getElementById("habit-manage-list");
+    list.innerHTML = "";
+    if(!state.habits.length){
+      list.innerHTML = '<div class="settings-row"><div class="t">Belum ada kebiasaan</div></div>';
+      return;
+    }
+    state.habits.forEach(function(h){
+      var row = document.createElement("div");
+      row.className = "habit-edit-row";
+      row.innerHTML =
+        '<span class="dot" style="--c:'+h.color+'"></span>'+
+        '<span class="nm"></span>'+
+        '<button data-act="edit">✏️</button>'+
+        '<button data-act="del">🗑️</button>';
+      row.querySelector(".nm").textContent = h.name;
+      row.querySelector('[data-act=edit]').addEventListener("click", function(){ openEdit(h.id); });
+      row.querySelector('[data-act=del]').addEventListener("click", function(){ deleteHabit(h.id); });
+      list.appendChild(row);
+    });
+  }
+
+  function deleteHabit(id){
+    if(!confirm("Hapus kebiasaan ini beserta seluruh riwayatnya?")) return;
+    state.habits = state.habits.filter(function(h){ return h.id!==id; });
+    save(); renderAll();
+    toast("Kebiasaan dihapus");
+  }
+
+  // ---------- modal ----------
+  var selectedTarget = 5;
+  var selectedColor = COLORS[0];
+  function buildModalOptions(){
+    var tp = document.getElementById("target-pills");
+    tp.innerHTML = "";
+    [1,2,3,4,5,6,7].forEach(function(n){
+      var b = document.createElement("button");
+      b.type="button"; b.textContent = n+"x";
+      if(n===selectedTarget) b.classList.add("sel");
+      b.addEventListener("click", function(){
+        selectedTarget = n;
+        tp.querySelectorAll("button").forEach(function(x){x.classList.remove("sel");});
+        b.classList.add("sel");
+      });
+      tp.appendChild(b);
+    });
+    var cp = document.getElementById("color-pills");
+    cp.innerHTML = "";
+    COLORS.forEach(function(c){
+      var b = document.createElement("button");
+      b.type="button"; b.style.background=c;
+      if(c===selectedColor) b.classList.add("sel");
+      b.addEventListener("click", function(){
+        selectedColor = c;
+        cp.querySelectorAll("button").forEach(function(x){x.classList.remove("sel");});
+        b.classList.add("sel");
+      });
+      cp.appendChild(b);
+    });
+  }
+  function openAdd(){
+    editingId = null;
+    document.getElementById("modal-title").textContent = "Kebiasaan Baru";
+    document.getElementById("input-name").value = "";
+    selectedTarget = 5; selectedColor = COLORS[state.habits.length % COLORS.length];
+    buildModalOptions();
+    showModal();
+  }
+  function openEdit(id){
+    var h = state.habits.find(function(x){ return x.id===id; });
+    if(!h) return;
+    editingId = id;
+    document.getElementById("modal-title").textContent = "Ubah Kebiasaan";
+    document.getElementById("input-name").value = h.name;
+    selectedTarget = h.target; selectedColor = h.color;
+    buildModalOptions();
+    showModal();
+  }
+  function showModal(){ document.getElementById("modal").classList.remove("hidden"); document.getElementById("input-name").focus(); }
+  function hideModal(){ document.getElementById("modal").classList.add("hidden"); }
+
+  function saveHabit(){
+    var name = document.getElementById("input-name").value.trim();
+    if(!name){ toast("Nama kebiasaan tidak boleh kosong"); return; }
+    if(editingId){
+      var h = state.habits.find(function(x){ return x.id===editingId; });
+      h.name = name; h.target = selectedTarget; h.color = selectedColor;
+    } else {
+      state.habits.push({ id: uid(), name: name, target: selectedTarget, color: selectedColor, logs: {}, createdAt: todayKey() });
+    }
+    save(); hideModal(); renderAll();
+    toast(editingId ? "Perubahan disimpan" : "Kebiasaan ditambahkan");
+  }
+
+  // ---------- nav ----------
+  function switchView(name){
+    document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("active"); });
+    document.getElementById("view-"+name).classList.add("active");
+    document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.view===name); });
+    if(name==="calendar"){ renderCalendarSelect(); renderCalendarGrid(); }
+    if(name==="stats") renderStats();
+    if(name==="settings") renderSettings();
+  }
+
+  function renderAll(){
+    renderHeader();
+    renderToday();
+    var activeView = document.querySelector(".nav-btn.active").dataset.view;
+    if(activeView==="calendar"){ renderCalendarSelect(); renderCalendarGrid(); }
+    if(activeView==="stats") renderStats();
+    if(activeView==="settings") renderSettings();
+  }
+
+  // ---------- export / import ----------
+  function exportData(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "kebiasaan-backup-"+todayKey()+".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast("Data diekspor");
+  }
+  function importData(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        if(!data || !Array.isArray(data.habits)) throw new Error("format tidak valid");
+        state = data; save(); renderAll();
+        toast("Data berhasil diimpor");
+      }catch(e){ toast("Gagal impor: file tidak valid"); }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- wire up ----------
+  document.querySelectorAll(".nav-btn").forEach(function(b){
+    b.addEventListener("click", function(){ switchView(b.dataset.view); });
+  });
+  document.getElementById("fab-add").addEventListener("click", openAdd);
+  document.getElementById("btn-cancel").addEventListener("click", hideModal);
+  document.getElementById("btn-save").addEventListener("click", saveHabit);
+  document.getElementById("modal").addEventListener("click", function(e){ if(e.target.id==="modal") hideModal(); });
+  document.getElementById("cal-habit-select").addEventListener("change", function(e){ calHabitId = e.target.value; renderCalendarGrid(); });
+  document.getElementById("cal-prev").addEventListener("click", function(){ calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth()-1, 1); renderCalendarGrid(); });
+  document.getElementById("cal-next").addEventListener("click", function(){ calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth()+1, 1); renderCalendarGrid(); });
+  document.getElementById("btn-export").addEventListener("click", exportData);
+  document.getElementById("btn-import").addEventListener("click", function(){ document.getElementById("file-import").click(); });
+  document.getElementById("file-import").addEventListener("change", function(e){ if(e.target.files[0]) importData(e.target.files[0]); });
+  document.getElementById("btn-reset").addEventListener("click", function(){
+    if(confirm("Hapus semua kebiasaan dan riwayat? Tindakan ini tidak bisa dibatalkan.")){
+      state = { habits: [] }; save(); renderAll(); toast("Semua data dihapus");
+    }
+  });
+
+  // seed one example habit on very first run so the app doesn't look broken
+  var isFirstRun = true;
+  try{ isFirstRun = !localStorage.getItem(STORAGE_KEY); }catch(e){ isFirstRun = (state.habits.length===0); }
+  if(state.habits.length===0 && isFirstRun){
+    state.habits.push({ id: uid(), name:"Olahraga 20 menit", target:4, color:COLORS[0], logs:{}, createdAt: todayKey() });
+    save();
+  }
+
+  renderAll();
+
+  // ---------- register service worker (offline support) ----------
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
